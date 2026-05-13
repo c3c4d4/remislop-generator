@@ -2,27 +2,205 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Create Video from Pinterest Images and YouTube Audio</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Remislop Generator</title>
+    <style>
+        :root { color-scheme: light; --ink: #171717; --muted: #666; --line: #d8d8d8; --soft: #f6f6f4; }
+        * { box-sizing: border-box; }
+        body { margin: 0; font: 15px/1.45 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--ink); background: #fbfbfa; }
+        main { width: min(640px, calc(100vw - 32px)); margin: 48px auto; }
+        h1 { margin: 0 0 24px; font-size: 24px; font-weight: 650; letter-spacing: 0; }
+        form { display: grid; gap: 14px; }
+        label { display: grid; gap: 6px; font-weight: 560; }
+        span { color: var(--muted); font-size: 13px; font-weight: 400; }
+        input, textarea { width: 100%; border: 1px solid var(--line); border-radius: 6px; padding: 10px 11px; background: white; color: var(--ink); font: inherit; }
+        textarea { min-height: 96px; resize: vertical; }
+        input:focus, textarea:focus { outline: 2px solid #111; outline-offset: 1px; }
+        .row { display: grid; grid-template-columns: 1fr 1fr 1fr 110px; gap: 12px; }
+        button, .button { border: 1px solid #111; border-radius: 6px; padding: 10px 12px; background: #111; color: white; font: inherit; text-decoration: none; cursor: pointer; text-align: center; }
+        .errors { margin: 0 0 18px; padding: 12px 14px; border: 1px solid #d7a9a9; border-radius: 6px; color: #7a1f1f; background: #fff7f7; }
+        .history { margin-top: 34px; border-top: 1px solid var(--line); padding-top: 20px; }
+        .history h2 { font-size: 15px; margin: 0 0 12px; }
+        .job { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; padding: 11px 0; border-top: 1px solid #ececea; }
+        .job:first-of-type { border-top: 0; }
+        .meta { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+        .status { text-transform: capitalize; }
+        .trim { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 6px; background: white; }
+        .trim[hidden] { display: none; }
+        .trim-head { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 13px; }
+        .range-wrap { position: relative; height: 30px; }
+        .range-track { position: absolute; left: 0; right: 0; top: 14px; height: 4px; border-radius: 999px; background: #e4e4e0; }
+        .range-fill { position: absolute; top: 14px; height: 4px; border-radius: 999px; background: #111; }
+        input[type="range"] { position: absolute; inset: 0; width: 100%; padding: 0; border: 0; background: transparent; pointer-events: none; appearance: none; }
+        input[type="range"]::-webkit-slider-thumb { appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #111; pointer-events: auto; cursor: pointer; }
+        input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; border: 0; border-radius: 50%; background: #111; pointer-events: auto; cursor: pointer; }
+        .range-status { color: var(--muted); font-size: 13px; min-height: 19px; }
+        @media (max-width: 620px) { main { margin-top: 28px; } .row { grid-template-columns: 1fr; } }
+    </style>
 </head>
 <body>
-    <h1>Create Video from Pinterest Images and YouTube Audio</h1>
-    <form action="/" method="post">
-        <label for="board_url">Pinterest Board URL:</label><br>
-        <input type="text" id="board_url" name="board_url" required><br><br>
+<main>
+    <h1>Remislop Generator</h1>
 
-        <label for="youtube_url">YouTube Video URL:</label><br>
-        <input type="text" id="youtube_url" name="youtube_url" required><br><br>
+    {% if errors %}
+        <div class="errors">
+            {% for error in errors %}<div>{{ error }}</div>{% endfor %}
+        </div>
+    {% endif %}
 
-        <label for="start_time">Start Time (e.g., 00:00:05 or 5 for 5 seconds):</label><br>
-        <input type="text" id="start_time" name="start_time" required><br><br>
+    <form action="{{ url_for('index') }}" method="post" enctype="multipart/form-data">
+        <label>
+            Image sources
+            <textarea name="board_urls" placeholder="https://www.pinterest.com/...\nhttps://www.pinterest.com/...">{{ values.get('board_urls', values.get('board_url', '')) }}</textarea>
+            <span>Use one Pinterest board per line, or upload files below.</span>
+        </label>
 
-        <label for="end_time">End Time (e.g., 00:00:10 or 10 for 10 seconds):</label><br>
-        <input type="text" id="end_time" name="end_time" required><br><br>
+        <label>
+            Image files
+            <input type="file" name="image_files" accept="image/png,image/jpeg,image/webp" multiple>
+        </label>
 
-        <input type="submit" value="Create Video">
+        <label>
+            Image ZIP
+            <input type="file" name="image_zip" accept=".zip,application/zip">
+        </label>
+
+        <label>
+            YouTube source
+            <input type="url" id="youtube-url" name="youtube_url" value="{{ values.get('youtube_url', '') }}" placeholder="https://www.youtube.com/watch?v=..." required>
+        </label>
+
+        <div class="trim" id="trim" hidden>
+            <div class="trim-head">
+                <span id="youtube-title"></span>
+                <span id="youtube-duration"></span>
+            </div>
+            <div class="range-wrap">
+                <div class="range-track"></div>
+                <div class="range-fill" id="range-fill"></div>
+                <input type="range" id="range-start" min="0" max="1" value="0">
+                <input type="range" id="range-end" min="0" max="1" value="1">
+            </div>
+            <div class="range-status" id="range-status"></div>
+        </div>
+
+        <div class="row">
+            <label>
+                Start
+                <input type="text" name="start_time" value="{{ values.get('start_time', '') }}" placeholder="0:30" required>
+            </label>
+            <label>
+                Length
+                <input type="text" name="video_length" value="{{ values.get('video_length', '') }}" placeholder="0:45">
+            </label>
+            <label>
+                End <span>optional</span>
+                <input type="text" name="end_time" value="{{ values.get('end_time', '') }}" placeholder="1:15">
+            </label>
+            <label>
+                FPS <span>1-30</span>
+                <input type="number" name="frame_rate" min="1" max="30" value="{{ values.get('frame_rate', config.default_frame_rate) }}">
+            </label>
+        </div>
+
+        <button type="submit">Create video</button>
     </form>
 
-    <p>{{ message }}</p>
-    <a href="/download">Download Video</a>
+    {% if jobs %}
+        <section class="history">
+            <h2>Recent jobs</h2>
+            {% for job in jobs %}
+                <div class="job">
+                    <div>
+                        <div class="status">{{ job.status }}</div>
+                        <div>{{ job.name }}</div>
+                        <div class="meta">{{ job.created_at }} · {{ job.board_url }}</div>
+                    </div>
+                    <a class="button" href="{{ url_for('status', job_id=job.id) }}">Open</a>
+                </div>
+            {% endfor %}
+        </section>
+    {% endif %}
+</main>
+<script>
+const youtubeInput = document.getElementById("youtube-url");
+const trim = document.getElementById("trim");
+const titleEl = document.getElementById("youtube-title");
+const durationEl = document.getElementById("youtube-duration");
+const statusEl = document.getElementById("range-status");
+const rangeStart = document.getElementById("range-start");
+const rangeEnd = document.getElementById("range-end");
+const rangeFill = document.getElementById("range-fill");
+const startInput = document.querySelector('input[name="start_time"]');
+const endInput = document.querySelector('input[name="end_time"]');
+const lengthInput = document.querySelector('input[name="video_length"]');
+let videoDuration = 0;
+let requestId = 0;
+
+function formatSeconds(value) {
+    value = Math.max(0, Math.round(Number(value) || 0));
+    const hours = Math.floor(value / 3600);
+    const minutes = Math.floor((value % 3600) / 60);
+    const seconds = value % 60;
+    if (hours) return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+    return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
+function updateRangeFromInputs(source) {
+    let start = Number(rangeStart.value);
+    let end = Number(rangeEnd.value);
+    if (source === "start" && start >= end) {
+        start = Math.max(0, end - 1);
+        rangeStart.value = start;
+    }
+    if (source === "end" && end <= start) {
+        end = Math.min(videoDuration, start + 1);
+        rangeEnd.value = end;
+    }
+    const left = videoDuration ? (start / videoDuration) * 100 : 0;
+    const right = videoDuration ? (end / videoDuration) * 100 : 100;
+    rangeFill.style.left = `${left}%`;
+    rangeFill.style.width = `${Math.max(0, right - left)}%`;
+    startInput.value = formatSeconds(start);
+    endInput.value = formatSeconds(end);
+    lengthInput.value = formatSeconds(end - start);
+    statusEl.textContent = `${formatSeconds(start)} - ${formatSeconds(end)} · ${formatSeconds(end - start)}`;
+}
+
+async function fetchYoutubeInfo() {
+    const url = youtubeInput.value.trim();
+    if (!url) {
+        trim.hidden = true;
+        return;
+    }
+    const id = ++requestId;
+    trim.hidden = false;
+    titleEl.textContent = "Reading video";
+    durationEl.textContent = "";
+    statusEl.textContent = "";
+    const response = await fetch(`/api/youtube?url=${encodeURIComponent(url)}`);
+    if (id !== requestId) return;
+    const data = await response.json();
+    if (!response.ok) {
+        titleEl.textContent = "Could not read video";
+        statusEl.textContent = data.error || "Metadata unavailable";
+        return;
+    }
+    videoDuration = data.duration;
+    titleEl.textContent = data.title;
+    durationEl.textContent = data.duration_label;
+    rangeStart.max = videoDuration;
+    rangeEnd.max = videoDuration;
+    rangeStart.value = 0;
+    rangeEnd.value = Math.min(videoDuration, 30);
+    updateRangeFromInputs("end");
+}
+
+youtubeInput.addEventListener("change", fetchYoutubeInfo);
+youtubeInput.addEventListener("blur", fetchYoutubeInfo);
+rangeStart.addEventListener("input", () => updateRangeFromInputs("start"));
+rangeEnd.addEventListener("input", () => updateRangeFromInputs("end"));
+if (youtubeInput.value.trim()) fetchYoutubeInfo();
+</script>
 </body>
 </html>

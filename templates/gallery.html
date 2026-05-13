@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Review Images</title>
+    <style>
+        :root { color-scheme: light; --ink: #171717; --muted: #666; --line: #d8d8d8; --bad: #8b1f1f; }
+        * { box-sizing: border-box; }
+        body { margin: 0; font: 15px/1.45 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--ink); background: #fbfbfa; }
+        main { width: min(1120px, calc(100vw - 32px)); margin: 40px auto; }
+        h1 { margin: 0 0 8px; font-size: 22px; font-weight: 650; letter-spacing: 0; }
+        .meta { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+        .actions { position: sticky; top: 0; z-index: 2; display: flex; gap: 10px; align-items: center; margin: 22px 0; padding: 10px 0; flex-wrap: wrap; background: #fbfbfa; }
+        button, .button { border: 1px solid #111; border-radius: 6px; padding: 10px 12px; background: #111; color: white; font: inherit; text-decoration: none; cursor: pointer; text-align: center; }
+        .secondary { background: transparent; color: #111; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+        .tile { position: relative; margin: 0; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: white; aspect-ratio: 1; }
+        .tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .tile input { position: absolute; top: 8px; left: 8px; width: 20px; height: 20px; accent-color: #111; }
+        .error { margin: 18px 0; padding: 12px 14px; border: 1px solid #d7a9a9; border-radius: 6px; color: var(--bad); background: #fff7f7; }
+    </style>
+</head>
+<body>
+<main>
+    <h1>{{ job.name }}</h1>
+    <div class="meta">Review images</div>
+    <div class="meta" id="meta">{{ job.status }} · {{ images|length }} images</div>
+
+    {% if errors %}
+        <div class="error">
+            {% for error in errors %}<div>{{ error }}</div>{% endfor %}
+        </div>
+    {% endif %}
+
+    {% if job.status not in ["review", "failed"] %}
+        <div class="meta">Fetching images. This page will refresh.</div>
+        <script>setTimeout(() => location.reload(), 1500);</script>
+    {% elif not images %}
+        <div class="error">No selectable images found.</div>
+        <div class="actions"><a class="button secondary" href="{{ url_for('index') }}">New job</a></div>
+    {% else %}
+        <form action="{{ url_for('generate', job_id=job.id) }}" method="post">
+            <div class="actions">
+                <button type="submit">Generate video</button>
+                <button class="secondary" type="button" id="select-all">Select all</button>
+                <button class="secondary" type="button" id="clear-all">Clear all</button>
+                <a class="button secondary" href="{{ url_for('index') }}">Cancel</a>
+            </div>
+
+            <div class="grid">
+                {% for image in images %}
+                    <label class="tile" title="{{ image.filename }}">
+                        <input type="checkbox" name="selected" value="{{ image.checksum }}" checked>
+                        <img src="{{ url_for('thumb', job_id=job.id, checksum=image.checksum) }}" loading="lazy" decoding="async" alt="">
+                    </label>
+                {% endfor %}
+            </div>
+        </form>
+
+        <script>
+        const boxes = () => Array.from(document.querySelectorAll('input[name="selected"]'));
+        document.getElementById("select-all").addEventListener("click", () => boxes().forEach(box => box.checked = true));
+        document.getElementById("clear-all").addEventListener("click", () => boxes().forEach(box => box.checked = false));
+        </script>
+    {% endif %}
+</main>
+</body>
+</html>

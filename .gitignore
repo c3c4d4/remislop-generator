@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+*.py[cod]
+downloaded_images/
+*.log
+.cache/
+instance/

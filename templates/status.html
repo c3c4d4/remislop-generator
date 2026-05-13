@@ -1,19 +1,101 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Status Page</title>
-    <meta http-equiv="refresh" content="5"> <!-- Auto-refresh every 5 seconds -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Job {{ job.id }}</title>
+    <style>
+        :root { color-scheme: light; --ink: #171717; --muted: #666; --line: #d8d8d8; --soft: #f6f6f4; --bad: #8b1f1f; }
+        * { box-sizing: border-box; }
+        body { margin: 0; font: 15px/1.45 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--ink); background: #fbfbfa; }
+        main { width: min(640px, calc(100vw - 32px)); margin: 48px auto; }
+        h1 { margin: 0 0 8px; font-size: 22px; font-weight: 650; letter-spacing: 0; }
+        .meta { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+        .bar { height: 8px; margin: 24px 0; border-radius: 999px; background: #e8e8e5; overflow: hidden; }
+        .fill { height: 100%; width: {{ job.progress }}%; background: #111; transition: width 180ms ease; }
+        ol { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+        li { display: grid; grid-template-columns: 22px 1fr; gap: 8px; align-items: center; color: var(--muted); }
+        .dot { width: 10px; height: 10px; border-radius: 50%; border: 1px solid var(--line); justify-self: center; }
+        .done .dot, .active .dot { background: #111; border-color: #111; }
+        .done, .active { color: var(--ink); }
+        .actions { display: flex; gap: 10px; margin-top: 26px; flex-wrap: wrap; }
+        .button { border: 1px solid #111; border-radius: 6px; padding: 10px 12px; background: #111; color: white; font: inherit; text-decoration: none; text-align: center; cursor: pointer; }
+        .secondary { background: transparent; color: #111; }
+        .error { margin-top: 22px; padding: 12px 14px; border: 1px solid #d7a9a9; border-radius: 6px; color: var(--bad); background: #fff7f7; white-space: pre-wrap; }
+        .preview { margin-top: 24px; }
+        video { display: block; width: 100%; max-height: 70vh; background: #111; border-radius: 6px; }
+    </style>
 </head>
 <body>
-    <h1>Task Status</h1>
-    <p>{{ message }}</p>
+<main>
+    <h1 id="title">{{ job.name }}</h1>
+    <div class="meta" id="meta">{{ job.status }} · {{ job.progress }}%</div>
+    <div class="meta">{{ job.board_url }}</div>
 
-    {% if download_link %}
-        <a href="{{ download_link }}">Download Video</a>
-    {% else %}
-        <p>Please wait while your video is being processed...</p>
-    {% endif %}
+    <div class="bar"><div class="fill" id="fill"></div></div>
 
-    <p><a href="{{ url_for('index') }}">Submit another request</a></p>
+    <ol id="steps">
+        {% for step in steps %}
+            <li class="{{ step.state }}" data-step="{{ step.id }}"><span class="dot"></span><span>{{ step.label }}</span></li>
+        {% endfor %}
+    </ol>
+
+    <div id="error" class="error" {% if not job.error %}hidden{% endif %}>{{ job.error }}</div>
+
+    <div id="preview" class="preview" {% if not job.video_url %}hidden{% endif %}>
+        <video id="video" controls preload="metadata" src="{{ job.video_url or '' }}"></video>
+    </div>
+
+    <div class="actions">
+        <button class="button" id="open" type="button" data-open-url="{{ job.open_url or '' }}" {% if not job.open_url %}hidden{% endif %}>Open in Explorer</button>
+        <button class="button secondary" id="save" type="button" data-save-url="{{ job.save_url or '' }}" {% if not job.save_url or job.saved %}hidden{% endif %}>Keep video</button>
+        <a class="button secondary" id="download" href="{{ job.download_url or '#' }}" {% if not job.download_url %}hidden{% endif %}>Download</a>
+        <a class="button secondary" href="{{ url_for('index') }}">New job</a>
+    </div>
+</main>
+
+<script>
+const jobId = "{{ job.id }}";
+async function refresh() {
+    const response = await fetch(`/api/jobs/${jobId}`);
+    if (!response.ok) return;
+    const job = await response.json();
+    document.getElementById("meta").textContent = `${job.status} · ${job.progress}%`;
+    document.getElementById("fill").style.width = `${job.progress}%`;
+    for (const step of job.steps) {
+        const el = document.querySelector(`[data-step="${step.id}"]`);
+        if (el) el.className = step.state;
+    }
+    const error = document.getElementById("error");
+    error.hidden = !job.error;
+    error.textContent = job.error || "";
+    const download = document.getElementById("download");
+    download.hidden = !job.download_url;
+    if (job.download_url) download.href = job.download_url;
+    const preview = document.getElementById("preview");
+    const video = document.getElementById("video");
+    preview.hidden = !job.video_url;
+    if (job.video_url && video.getAttribute("src") !== job.video_url) video.setAttribute("src", job.video_url);
+    const open = document.getElementById("open");
+    open.hidden = !job.open_url;
+    if (job.open_url) open.dataset.openUrl = job.open_url;
+    const save = document.getElementById("save");
+    save.hidden = !job.save_url || Boolean(job.saved);
+    if (job.save_url) save.dataset.saveUrl = job.save_url;
+    if (!["complete", "failed"].includes(job.status)) setTimeout(refresh, 1500);
+}
+document.getElementById("open").addEventListener("click", async (event) => {
+    const url = event.currentTarget.dataset.openUrl;
+    if (!url) return;
+    await fetch(url, { method: "POST" });
+});
+document.getElementById("save").addEventListener("click", async (event) => {
+    const url = event.currentTarget.dataset.saveUrl;
+    if (!url) return;
+    const response = await fetch(url, { method: "POST" });
+    if (response.ok) event.currentTarget.hidden = true;
+});
+if (!["complete", "failed"].includes("{{ job.status }}")) setTimeout(refresh, 1000);
+</script>
 </body>
 </html>

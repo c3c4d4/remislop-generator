@@ -1,0 +1,109 @@
+import unittest
+import wave
+import tempfile
+from pathlib import Path
+
+from PIL import Image
+
+from tasks import bitrate_plan, collection_background_theme, collection_canvas_size, copy_tree_contents, estimate_bpm_from_wav, normalize_source_url, repaint_logo, sample_images, shuffled_images
+
+
+class TaskHelperTests(unittest.TestCase):
+    def test_sample_images_keeps_even_spread(self):
+        images = [Path(f"{idx}.jpg") for idx in range(10)]
+        sampled = sample_images(images, 4)
+        self.assertEqual(len(sampled), 4)
+        self.assertEqual(sampled[0], images[0])
+        self.assertEqual(sampled[-1], images[-1])
+
+    def test_sample_images_returns_all_when_under_limit(self):
+        images = [Path("a.jpg"), Path("b.jpg")]
+        self.assertEqual(sample_images(images, 5), images)
+
+    def test_shuffled_images_is_seeded_and_keeps_same_items(self):
+        images = [Path(f"{idx}.jpg") for idx in range(10)]
+        shuffled = shuffled_images(images, seed="job")
+        self.assertEqual(set(shuffled), set(images))
+        self.assertEqual(shuffled, shuffled_images(images, seed="job"))
+        self.assertNotEqual(shuffled, images)
+
+    def test_normalize_source_url_rewrites_pinterest_country_domain(self):
+        url = normalize_source_url("https://jp.pinterest.com/rickqrs_/tuff/")
+        self.assertEqual(url, "https://www.pinterest.com/rickqrs_/tuff/")
+
+    def test_frame_count_for_duration_math(self):
+        self.assertEqual(round(20 * 10), 200)
+        self.assertEqual(round(7.5 * 10), 75)
+
+    def test_collection_background_theme_uses_image_brightness(self):
+        dark = Image.new("RGBA", (200, 200), (10, 10, 10, 255))
+        light = Image.new("RGBA", (200, 200), (245, 245, 245, 255))
+        dark_path = Path("dark_test_theme.png")
+        light_path = Path("light_test_theme.png")
+        try:
+            dark.save(dark_path)
+            light.save(light_path)
+
+            self.assertEqual(collection_background_theme([dark_path]), "dark")
+            self.assertEqual(collection_background_theme([light_path]), "light")
+        finally:
+            dark_path.unlink(missing_ok=True)
+            light_path.unlink(missing_ok=True)
+
+    def test_bitrate_plan_scales_with_duration(self):
+        short = bitrate_plan(30, max_output_mb=9.5)
+        long = bitrate_plan(1200, max_output_mb=9.5)
+
+        self.assertGreater(short["video_kbps"], long["video_kbps"])
+        self.assertGreaterEqual(long["audio_kbps"], 16)
+        self.assertGreaterEqual(long["video_kbps"], 12)
+
+    def test_repaint_logo_preserves_alpha(self):
+        logo = Image.new("RGBA", (2, 2), (0, 0, 0, 0))
+        logo.putpixel((0, 0), (0, 0, 0, 128))
+        painted = repaint_logo(logo, (255, 255, 255, 220))
+
+        self.assertEqual(painted.getpixel((0, 0)), (255, 255, 255, 128))
+        self.assertEqual(painted.getpixel((1, 1))[3], 0)
+
+    def test_estimate_bpm_from_empty_wav_falls_back(self):
+        path = Path("empty_bpm_test.wav")
+        try:
+            with wave.open(str(path), "wb") as wav_file:
+                wav_file.setnchannels(1)
+                wav_file.setsampwidth(2)
+                wav_file.setframerate(8000)
+                wav_file.writeframes(b"")
+            self.assertEqual(estimate_bpm_from_wav(path), 120)
+        finally:
+            path.unlink(missing_ok=True)
+
+    def test_copy_tree_contents_merges_existing_directories(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source_a = root / "source_a"
+            source_b = root / "source_b"
+            target = root / "target"
+            (source_a / "pinterest" / "board_a").mkdir(parents=True)
+            (source_b / "pinterest" / "board_b").mkdir(parents=True)
+            (source_a / "pinterest" / "board_a" / "a.jpg").write_bytes(b"a")
+            (source_b / "pinterest" / "board_b" / "b.jpg").write_bytes(b"b")
+
+            copy_tree_contents(source_a, target)
+            copy_tree_contents(source_b, target)
+
+            self.assertTrue((target / "pinterest" / "board_a" / "a.jpg").exists())
+            self.assertTrue((target / "pinterest" / "board_b" / "b.jpg").exists())
+
+    def test_collection_canvas_size_keeps_height_and_scales_width(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            first = Path(tmp) / "first.png"
+            second = Path(tmp) / "second.png"
+            Image.new("RGB", (100, 100), "black").save(first)
+            Image.new("RGB", (300, 100), "white").save(second)
+
+            self.assertEqual(collection_canvas_size([first, second]), (3240, 1080))
+
+
+if __name__ == "__main__":
+    unittest.main()
