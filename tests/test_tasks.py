@@ -5,7 +5,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from tasks import bitrate_plan, collection_background_theme, collection_canvas_size, copy_tree_contents, estimate_bpm_from_wav, normalize_source_url, repaint_logo, sample_images, shuffled_images
+from tasks import apply_post_effects, bitrate_plan, collection_background_theme, collection_canvas_size, copy_tree_contents, estimate_bpm_from_wav, fps_from_bpm, normalize_post_settings, normalize_source_url, invert_logo, sample_images, shuffled_images
 
 
 class TaskHelperTests(unittest.TestCase):
@@ -58,13 +58,13 @@ class TaskHelperTests(unittest.TestCase):
         self.assertGreaterEqual(long["audio_kbps"], 16)
         self.assertGreaterEqual(long["video_kbps"], 12)
 
-    def test_repaint_logo_preserves_alpha(self):
+    def test_invert_logo_preserves_alpha(self):
         logo = Image.new("RGBA", (2, 2), (0, 0, 0, 0))
-        logo.putpixel((0, 0), (0, 0, 0, 128))
-        painted = repaint_logo(logo, (255, 255, 255, 220))
+        logo.putpixel((0, 0), (255, 0, 0, 128))
+        inverted = invert_logo(logo)
 
-        self.assertEqual(painted.getpixel((0, 0)), (255, 255, 255, 128))
-        self.assertEqual(painted.getpixel((1, 1))[3], 0)
+        self.assertEqual(inverted.getpixel((0, 0)), (0, 255, 255, 128))
+        self.assertEqual(inverted.getpixel((1, 1))[3], 0)
 
     def test_estimate_bpm_from_empty_wav_falls_back(self):
         path = Path("empty_bpm_test.wav")
@@ -77,6 +77,12 @@ class TaskHelperTests(unittest.TestCase):
             self.assertEqual(estimate_bpm_from_wav(path), 120)
         finally:
             path.unlink(missing_ok=True)
+
+    def test_fps_from_bpm_keeps_render_rate_bounded(self):
+        self.assertEqual(fps_from_bpm(60), 6)
+        self.assertEqual(fps_from_bpm(120), 10)
+        self.assertEqual(fps_from_bpm(142), 12)
+        self.assertEqual(fps_from_bpm(240), 18)
 
     def test_copy_tree_contents_merges_existing_directories(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -103,6 +109,32 @@ class TaskHelperTests(unittest.TestCase):
             Image.new("RGB", (300, 100), "white").save(second)
 
             self.assertEqual(collection_canvas_size([first, second]), (3240, 1080))
+
+    def test_normalize_post_settings_clamps_values(self):
+        settings = normalize_post_settings(
+            {
+                "brightness": "3",
+                "contrast": "bad",
+                "saturation": "-1",
+                "sharpness": "1.5",
+                "glow": "99",
+                "pixelate": "4",
+            }
+        )
+
+        self.assertEqual(settings["brightness"], 1.4)
+        self.assertEqual(settings["contrast"], 1.0)
+        self.assertEqual(settings["saturation"], 0.0)
+        self.assertEqual(settings["sharpness"], 1.5)
+        self.assertEqual(settings["glow"], 12)
+        self.assertEqual(settings["pixelate"], 4)
+
+    def test_apply_post_effects_changes_frame_without_resizing(self):
+        frame = Image.new("RGBA", (8, 8), (100, 100, 100, 255))
+        changed = apply_post_effects(frame, {"brightness": 1.4, "contrast": 1.0})
+
+        self.assertEqual(changed.size, frame.size)
+        self.assertGreater(changed.getpixel((0, 0))[0], frame.getpixel((0, 0))[0])
 
 
 if __name__ == "__main__":

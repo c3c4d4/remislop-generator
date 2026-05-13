@@ -177,6 +177,24 @@ def mark_saved(job_id):
             conn.execute("UPDATE jobs SET saved = 1, updated_at = ? WHERE id = ?", (utc_now(), job_id))
 
 
+def mark_interrupted_jobs():
+    now = utc_now()
+    with closing(connect()) as conn:
+        with conn:
+            conn.execute(
+                """
+                UPDATE jobs
+                SET status = 'failed',
+                    error = 'Interrupted by server restart. Start a new generation.',
+                    updated_at = ?,
+                    completed_at = ?
+                WHERE status IN ('queued', 'running')
+                  AND step NOT IN ('queued', 'review', 'complete')
+                """,
+                (now, now),
+            )
+
+
 def block_checksums(checksums):
     now = utc_now()
     with closing(connect()) as conn:

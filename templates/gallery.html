@@ -14,11 +14,20 @@
         .actions { position: sticky; top: 0; z-index: 2; display: flex; gap: 10px; align-items: center; margin: 22px 0; padding: 10px 0; flex-wrap: wrap; background: #fbfbfa; }
         button, .button { border: 1px solid #111; border-radius: 6px; padding: 10px 12px; background: #111; color: white; font: inherit; text-decoration: none; cursor: pointer; text-align: center; }
         .secondary { background: transparent; color: #111; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
-        .tile { position: relative; margin: 0; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: white; aspect-ratio: 1; }
-        .tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .post { margin: 0 0 22px; padding: 16px 0 18px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+        .post h2 { margin: 0 0 12px; font-size: 15px; font-weight: 650; letter-spacing: 0; }
+        .controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px 18px; }
+        .control { display: grid; gap: 5px; color: var(--muted); font-size: 13px; }
+        .control input { width: 100%; accent-color: #111; }
+        .value { color: var(--ink); font-variant-numeric: tabular-nums; }
+        .grid { --brightness: 1; --contrast: 1; --saturation: 1; --glow: 0px; --pixel-size: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+        .tile { position: relative; margin: 0; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: white; aspect-ratio: 1; box-shadow: 0 0 var(--glow) rgba(0, 0, 0, 0.32); }
+        .tile img { width: 100%; height: 100%; object-fit: cover; display: block; filter: brightness(var(--brightness)) contrast(var(--contrast)) saturate(var(--saturation)); image-rendering: var(--pixel-size); }
         .tile input { position: absolute; top: 8px; left: 8px; width: 20px; height: 20px; accent-color: #111; }
+        .tile::after { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: var(--sharpness-opacity, 0); background: radial-gradient(circle, transparent 45%, rgba(0, 0, 0, 0.18)); mix-blend-mode: overlay; }
         .error { margin: 18px 0; padding: 12px 14px; border: 1px solid #d7a9a9; border-radius: 6px; color: var(--bad); background: #fff7f7; }
+        @media (max-width: 720px) { .controls { grid-template-columns: 1fr 1fr; } }
+        @media (max-width: 480px) { .controls { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
@@ -48,7 +57,37 @@
                 <a class="button secondary" href="{{ url_for('index') }}">Cancel</a>
             </div>
 
-            <div class="grid">
+            <section class="post" aria-label="Post production">
+                <h2>Post</h2>
+                <div class="controls">
+                    <label class="control">
+                        Brightness <span class="value">1.00</span>
+                        <input type="range" name="post_brightness" min="0.6" max="1.4" step="0.05" value="1">
+                    </label>
+                    <label class="control">
+                        Contrast <span class="value">1.00</span>
+                        <input type="range" name="post_contrast" min="0.6" max="1.6" step="0.05" value="1">
+                    </label>
+                    <label class="control">
+                        Saturation <span class="value">1.00</span>
+                        <input type="range" name="post_saturation" min="0" max="1.8" step="0.05" value="1">
+                    </label>
+                    <label class="control">
+                        Sharpness <span class="value">1.00</span>
+                        <input type="range" name="post_sharpness" min="0" max="2" step="0.05" value="1">
+                    </label>
+                    <label class="control">
+                        Glow <span class="value">0</span>
+                        <input type="range" name="post_glow" min="0" max="12" step="1" value="0">
+                    </label>
+                    <label class="control">
+                        Pixelate <span class="value">0</span>
+                        <input type="range" name="post_pixelate" min="0" max="12" step="1" value="0">
+                    </label>
+                </div>
+            </section>
+
+            <div class="grid" id="image-grid">
                 {% for image in images %}
                     <label class="tile" title="{{ image.filename }}">
                         <input type="checkbox" name="selected" value="{{ image.checksum }}" checked>
@@ -60,8 +99,35 @@
 
         <script>
         const boxes = () => Array.from(document.querySelectorAll('input[name="selected"]'));
+        const grid = document.getElementById("image-grid");
         document.getElementById("select-all").addEventListener("click", () => boxes().forEach(box => box.checked = true));
         document.getElementById("clear-all").addEventListener("click", () => boxes().forEach(box => box.checked = false));
+        const controls = Array.from(document.querySelectorAll(".control input"));
+
+        function readControl(name) {
+            const input = document.querySelector(`[name="${name}"]`);
+            return input ? Number(input.value) : 0;
+        }
+
+        function updatePreview() {
+            grid.style.setProperty("--brightness", readControl("post_brightness"));
+            grid.style.setProperty("--contrast", readControl("post_contrast"));
+            grid.style.setProperty("--saturation", readControl("post_saturation"));
+            grid.style.setProperty("--glow", `${readControl("post_glow") * 1.8}px`);
+            grid.style.setProperty("--sharpness-opacity", Math.max(0, readControl("post_sharpness") - 1) * 0.35);
+            grid.style.setProperty("--pixel-size", readControl("post_pixelate") > 1 ? "pixelated" : "auto");
+        }
+
+        controls.forEach(input => {
+            const value = input.parentElement.querySelector(".value");
+            const render = () => {
+                value.textContent = input.step === "1" ? input.value : Number(input.value).toFixed(2);
+                updatePreview();
+            };
+            input.addEventListener("input", render);
+            render();
+        });
+        updatePreview();
         </script>
     {% endif %}
 </main>

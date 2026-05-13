@@ -1,32 +1,34 @@
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from io import BytesIO
 import json
 import subprocess
 import zipfile
 
 from flask import Flask, jsonify, redirect, render_template, request, send_file, url_for
 from werkzeug.utils import secure_filename
+from PIL import Image, ImageEnhance, ImageFilter, ImageOps
 
 from celery_config import celery_app, logger
 from config import config
-from jobs import block_checksums, cleanup_unsaved_outputs, create_job, get_job, init_db, mark_saved, recent_jobs, step_payload, update_job
-from tasks import delayed_delete_path, ensure_thumbnail, prepare_gallery, prepare_gallery_task, process_job, process_job_task
+from jobs import block_checksums, cleanup_unsaved_outputs, create_job, get_job, init_db, mark_interrupted_jobs, mark_saved, recent_jobs, step_payload, update_job
+from tasks import delayed_delete_path, ensure_thumbnail, post_settings_from_form, prepare_gallery, prepare_gallery_task, process_job, process_job_task, yt_dlp_base_command
 from validation import validate_request
 
 
 app = Flask(__name__)
-executor = ThreadPoolExecutor(max_workers=2)
+executor = ThreadPoolExecutor(max_workers=1)
 
 
 def dispatch_job(job_id):
-    if celery_app.conf.task_always_eager and config.local_background_jobs:
+    if config.local_background_jobs:
         executor.submit(process_job, job_id)
     else:
         process_job_task.delay(job_id)
 
 
 def dispatch_gallery(job_id):
-    if celery_app.conf.task_always_eager and config.local_background_jobs:
+    if config.local_background_jobs:
         executor.submit(prepare_gallery, job_id)
     else:
         prepare_gallery_task.delay(job_id)
@@ -146,6 +148,7 @@ def generate(job_id):
     details = dict(job.get("details") or {})
     details["selected_images"] = selected
     details["blocked_from_review"] = len(rejected)
+    details["post_settings"] = post_settings_from_form(request.form)
     update_job(job_id, status="queued", step="queued", progress=30, error="", details=details)
     cleanup_unsaved_outputs(except_job_id=job_id)
     dispatch_job(job_id)
@@ -200,44 +203,85 @@ def api_job(job_id):
 
 
 @app.route("/api/youtube")
-def api_youtube():
-    youtube_url = (request.args.get("url") or "").strip()
-    if not youtube_url:
+@app.route("/api/audio-source")
+def api_audio_source():
+    audio_url = (request.args.get("url") or "").strip()
+    if not audio_url:
         return jsonify({"error": "Missing URL"}), 400
 
-    command = [
-        str(Path(".venv") / "Scripts" / "python.exe") if (Path(".venv") / "Scripts" / "python.exe").exists() else "python",
-        "-m",
-        "yt_dlp",
+    command = yt_dlp_base_command() + [
         "--dump-single-json",
         "--skip-download",
         "--no-playlist",
-        youtube_url,
+        audio_url,
     ]
     try:
         result = subprocess.run(command, capture_output=True, text=True, timeout=30)
     except subprocess.TimeoutExpired:
-        return jsonify({"error": "Timed out while reading video metadata"}), 504
+        return jsonify({"error": "Timed out while reading audio metadata"}), 504
 
     if result.returncode != 0:
-        return jsonify({"error": (result.stderr or result.stdout or "Could not read video metadata")[-800:]}), 400
+        return jsonify({"error": (result.stderr or result.stdout or "Could not read audio metadata")[-800:]}), 400
 
     try:
         payload = json.loads(result.stdout)
     except json.JSONDecodeError:
-        return jsonify({"error": "Could not parse video metadata"}), 400
+        return jsonify({"error": "Could not parse audio metadata"}), 400
 
     duration = int(payload.get("duration") or 0)
     if duration <= 0:
-        return jsonify({"error": "Video duration is unavailable"}), 400
+        return jsonify({"error": "Audio duration is unavailable"}), 400
 
     return jsonify(
         {
-            "title": payload.get("title") or "YouTube video",
+            "title": payload.get("title") or "Audio source",
             "duration": duration,
             "duration_label": format_seconds(duration),
         }
     )
+
+
+@app.route("/preview_effect/<job_id>", methods=["GET"])
+def preview_effect(job_id):
+    # Grab the first available frame from the sequence folder to preview
+    sequence_dir = config.output_dir / job_id / "frames" / "sequence"
+    frames = list(sequence_dir.glob("*.jpg"))
+    if not frames:
+        return "Not found", 404
+        
+    img = Image.open(frames[0]).convert("RGBA")
+    
+    # Example: grab query params
+    contrast = float(request.args.get("contrast", 1.0))
+    glow = int(request.args.get("glow", 0))
+    pixelate = int(request.args.get("pixelate", 0))
+    # format tint as r,g,b hex (e.g. "ff0000")
+    tint_color = request.args.get("tint")
+    opacity = float(request.args.get("opacity", 0.0))
+
+    if contrast != 1.0:
+        enhancer = ImageEnhance.Contrast(img)
+        img = enhancer.enhance(contrast)
+    
+    if tint_color and opacity > 0:
+        color = tuple(int(tint_color[i:i+2], 16) for i in (0, 2, 4)) + (255,)
+        overlay = Image.new("RGBA", img.size, color)
+        img = Image.blend(img, overlay, opacity)
+        
+    if pixelate > 0:
+        # crude pixelation
+        small = img.resize((img.size[0] // pixelate, img.size[1] // pixelate), Image.NEAREST)
+        img = small.resize(img.size, Image.NEAREST)
+        
+    if glow > 0:
+        # Super basic glow effect 
+        img_blur = img.filter(ImageFilter.GaussianBlur(glow))
+        img = Image.blend(img, img_blur, 0.5)
+
+    buf = BytesIO()
+    img.convert("RGB").save(buf, format="JPEG")
+    buf.seek(0)
+    return send_file(buf, mimetype="image/jpeg")
 
 
 @app.route("/download/<job_id>")
@@ -247,8 +291,22 @@ def download(job_id):
         return "Video not ready yet.", 404
 
     response = send_file(file_path, as_attachment=True, download_name=f"remislop-{job_id}.mp4")
-    if not celery_app.conf.task_always_eager:
+    
+    if config.local_background_jobs:
+        import threading
+        import time
+        import shutil
+        def do_delete():
+            time.sleep(config.cleanup_after_seconds)
+            try:
+                if file_path.parent.exists():
+                    shutil.rmtree(file_path.parent)
+            except Exception as e:
+                logger.error(f"Failed to delete {file_path.parent}: {e}")
+        threading.Thread(target=do_delete, daemon=True).start()
+    elif not celery_app.conf.task_always_eager:
         delayed_delete_path.apply_async(args=[str(file_path.parent)], countdown=config.cleanup_after_seconds)
+        
     return response
 
 
@@ -295,4 +353,6 @@ def output_file_for_response(job_id):
 
 
 if __name__ == "__main__":
+    init_db()
+    mark_interrupted_jobs()
     app.run(host="0.0.0.0")

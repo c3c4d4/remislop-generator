@@ -5,3 +5,4 @@ downloaded_images/
 *.log
 .cache/
 instance/
+previews/

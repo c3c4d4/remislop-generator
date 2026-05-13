@@ -16,7 +16,7 @@
         input, textarea { width: 100%; border: 1px solid var(--line); border-radius: 6px; padding: 10px 11px; background: white; color: var(--ink); font: inherit; }
         textarea { min-height: 96px; resize: vertical; }
         input:focus, textarea:focus { outline: 2px solid #111; outline-offset: 1px; }
-        .row { display: grid; grid-template-columns: 1fr 1fr 1fr 110px; gap: 12px; }
+        .row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
         button, .button { border: 1px solid #111; border-radius: 6px; padding: 10px 12px; background: #111; color: white; font: inherit; text-decoration: none; cursor: pointer; text-align: center; }
         .errors { margin: 0 0 18px; padding: 12px 14px; border: 1px solid #d7a9a9; border-radius: 6px; color: #7a1f1f; background: #fff7f7; }
         .history { margin-top: 34px; border-top: 1px solid var(--line); padding-top: 20px; }
@@ -51,8 +51,8 @@
     <form action="{{ url_for('index') }}" method="post" enctype="multipart/form-data">
         <label>
             Image sources
-            <textarea name="board_urls" placeholder="https://www.pinterest.com/...\nhttps://www.pinterest.com/...">{{ values.get('board_urls', values.get('board_url', '')) }}</textarea>
-            <span>Use one Pinterest board per line, or upload files below.</span>
+            <textarea name="board_urls" placeholder="https://www.pinterest.com/...\nhttps://www.are.na/...">{{ values.get('board_urls', values.get('board_url', '')) }}</textarea>
+            <span>Use one image source per line (Pinterest or are.na), or upload files below.</span>
         </label>
 
         <label>
@@ -66,8 +66,8 @@
         </label>
 
         <label>
-            YouTube source
-            <input type="url" id="youtube-url" name="youtube_url" value="{{ values.get('youtube_url', '') }}" placeholder="https://www.youtube.com/watch?v=..." required>
+            Audio source
+            <input type="url" id="youtube-url" name="youtube_url" value="{{ values.get('youtube_url', '') }}" placeholder="YouTube or SoundCloud URL" required>
         </label>
 
         <div class="trim" id="trim" hidden>
@@ -96,10 +96,6 @@
             <label>
                 End <span>optional</span>
                 <input type="text" name="end_time" value="{{ values.get('end_time', '') }}" placeholder="1:15">
-            </label>
-            <label>
-                FPS <span>1-30</span>
-                <input type="number" name="frame_rate" min="1" max="30" value="{{ values.get('frame_rate', config.default_frame_rate) }}">
             </label>
         </div>
 
@@ -167,7 +163,7 @@ function updateRangeFromInputs(source) {
     statusEl.textContent = `${formatSeconds(start)} - ${formatSeconds(end)} · ${formatSeconds(end - start)}`;
 }
 
-async function fetchYoutubeInfo() {
+async function fetchAudioInfo() {
     const url = youtubeInput.value.trim();
     if (!url) {
         trim.hidden = true;
@@ -175,14 +171,14 @@ async function fetchYoutubeInfo() {
     }
     const id = ++requestId;
     trim.hidden = false;
-    titleEl.textContent = "Reading video";
+    titleEl.textContent = "Reading audio";
     durationEl.textContent = "";
     statusEl.textContent = "";
-    const response = await fetch(`/api/youtube?url=${encodeURIComponent(url)}`);
+    const response = await fetch(`/api/audio-source?url=${encodeURIComponent(url)}`);
     if (id !== requestId) return;
     const data = await response.json();
     if (!response.ok) {
-        titleEl.textContent = "Could not read video";
+        titleEl.textContent = "Could not read audio";
         statusEl.textContent = data.error || "Metadata unavailable";
         return;
     }
@@ -196,11 +192,11 @@ async function fetchYoutubeInfo() {
     updateRangeFromInputs("end");
 }
 
-youtubeInput.addEventListener("change", fetchYoutubeInfo);
-youtubeInput.addEventListener("blur", fetchYoutubeInfo);
+youtubeInput.addEventListener("change", fetchAudioInfo);
+youtubeInput.addEventListener("blur", fetchAudioInfo);
 rangeStart.addEventListener("input", () => updateRangeFromInputs("start"));
 rangeEnd.addEventListener("input", () => updateRangeFromInputs("end"));
-if (youtubeInput.value.trim()) fetchYoutubeInfo();
+if (youtubeInput.value.trim()) fetchAudioInfo();
 </script>
 </body>
 </html>

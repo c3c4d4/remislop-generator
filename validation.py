@@ -33,7 +33,7 @@ def split_source_urls(value):
 
 def validate_request(form, max_duration_seconds, has_upload=False):
     board_url = (form.get("board_urls") or form.get("board_url") or "").strip()
-    youtube_url = (form.get("youtube_url") or "").strip()
+    youtube_url = (form.get("youtube_url") or form.get("audio_url") or "").strip()
     start_time = (form.get("start_time") or "").strip()
     end_time = (form.get("end_time") or "").strip()
     video_length = (form.get("video_length") or "").strip()
@@ -47,7 +47,7 @@ def validate_request(form, max_duration_seconds, has_upload=False):
             errors.append(f"Invalid image source URL: {source_url}")
             break
     if not _has_http_url(youtube_url):
-        errors.append("Enter a valid YouTube URL.")
+        errors.append("Enter a valid YouTube or SoundCloud URL.")
 
     start_seconds = parse_time(start_time)
     length_seconds = parse_time(video_length) if video_length else None

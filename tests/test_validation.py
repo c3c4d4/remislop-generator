@@ -18,7 +18,7 @@ class ValidationTests(unittest.TestCase):
         result = validate_request(
             {
                 "board_url": "not-a-url",
-                "youtube_url": "https://youtube.com/watch?v=x",
+                "youtube_url": "https://soundcloud.com/user/track",
                 "start_time": "20",
                 "end_time": "10",
                 "frame_rate": "40",
@@ -34,7 +34,7 @@ class ValidationTests(unittest.TestCase):
         result = validate_request(
             {
                 "board_url": "",
-                "youtube_url": "https://youtube.com/watch?v=x",
+                "youtube_url": "https://soundcloud.com/user/track",
                 "start_time": "0",
                 "end_time": "10",
                 "frame_rate": "10",
@@ -49,7 +49,7 @@ class ValidationTests(unittest.TestCase):
         result = validate_request(
             {
                 "board_urls": "https://example.com/a\nhttps://example.com/b",
-                "youtube_url": "https://youtube.com/watch?v=x",
+                "youtube_url": "https://soundcloud.com/user/track",
                 "start_time": "0",
                 "video_length": "10",
                 "end_time": "",
