@@ -108,7 +108,14 @@ class TaskHelperTests(unittest.TestCase):
             Image.new("RGB", (100, 100), "black").save(first)
             Image.new("RGB", (300, 100), "white").save(second)
 
-            self.assertEqual(collection_canvas_size([first, second]), (3240, 1080))
+            self.assertEqual(collection_canvas_size([first, second]), (1920, 1080))
+
+    def test_collection_canvas_size_has_minimum_width(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            image_path = Path(tmp) / "portrait.png"
+            Image.new("RGB", (300, 900), "black").save(image_path)
+
+            self.assertEqual(collection_canvas_size([image_path]), (1080, 1080))
 
     def test_normalize_post_settings_clamps_values(self):
         settings = normalize_post_settings(
@@ -117,7 +124,6 @@ class TaskHelperTests(unittest.TestCase):
                 "contrast": "bad",
                 "saturation": "-1",
                 "sharpness": "1.5",
-                "glow": "99",
                 "pixelate": "4",
             }
         )
@@ -126,7 +132,6 @@ class TaskHelperTests(unittest.TestCase):
         self.assertEqual(settings["contrast"], 1.0)
         self.assertEqual(settings["saturation"], 0.0)
         self.assertEqual(settings["sharpness"], 1.5)
-        self.assertEqual(settings["glow"], 12)
         self.assertEqual(settings["pixelate"], 4)
 
     def test_apply_post_effects_changes_frame_without_resizing(self):

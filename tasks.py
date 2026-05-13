@@ -12,7 +12,7 @@ from pathlib import Path
 from time import sleep
 from urllib.parse import urlparse, urlunparse
 
-from PIL import Image, ImageEnhance, ImageFilter, ImageOps
+from PIL import Image, ImageEnhance, ImageOps
 
 from celery_config import celery_app, logger
 from config import config
@@ -26,7 +26,6 @@ DEFAULT_POST_SETTINGS = {
     "contrast": 1.0,
     "saturation": 1.0,
     "sharpness": 1.0,
-    "glow": 0,
     "pixelate": 0,
 }
 
@@ -118,7 +117,6 @@ def normalize_post_settings(values=None):
         "contrast": clamp_float(values.get("contrast"), 0.6, 1.6, DEFAULT_POST_SETTINGS["contrast"]),
         "saturation": clamp_float(values.get("saturation"), 0.0, 1.8, DEFAULT_POST_SETTINGS["saturation"]),
         "sharpness": clamp_float(values.get("sharpness"), 0.0, 2.0, DEFAULT_POST_SETTINGS["sharpness"]),
-        "glow": clamp_int(values.get("glow"), 0, 12, DEFAULT_POST_SETTINGS["glow"]),
         "pixelate": clamp_int(values.get("pixelate"), 0, 12, DEFAULT_POST_SETTINGS["pixelate"]),
     }
 
@@ -130,7 +128,6 @@ def post_settings_from_form(form):
             "contrast": form.get("post_contrast"),
             "saturation": form.get("post_saturation"),
             "sharpness": form.get("post_sharpness"),
-            "glow": form.get("post_glow"),
             "pixelate": form.get("post_pixelate"),
         }
     )
@@ -147,9 +144,6 @@ def apply_post_effects(frame, settings):
         frame = ImageEnhance.Color(frame).enhance(settings["saturation"])
     if settings["sharpness"] != 1.0:
         frame = ImageEnhance.Sharpness(frame).enhance(settings["sharpness"])
-    if settings["glow"] > 0:
-        glow = frame.filter(ImageFilter.GaussianBlur(settings["glow"]))
-        frame = Image.blend(frame, glow, 0.28)
     if settings["pixelate"] > 1:
         width, height = frame.size
         factor = settings["pixelate"]
@@ -560,24 +554,26 @@ def prepare_layer(args):
     return layer_path
 
 
-def collection_canvas_size(image_paths, target_height=1080):
-    max_width = 0
+def collection_canvas_size(image_paths, target_height=1080, min_width=1080, max_canvas_width=1920):
+    calculated_width = 0
     for path in image_paths:
         try:
             with Image.open(path) as img:
                 width, height = img.size
                 if height > 0:
                     scaled_width = round(width * (target_height / height))
-                    max_width = max(max_width, scaled_width)
+                    calculated_width = max(calculated_width, scaled_width)
         except Exception:
             continue
 
-    if max_width <= 0:
-        return 1920, 1080
+    if calculated_width <= 0:
+        return 1920, target_height
 
-    if max_width % 2:
-        max_width += 1
-    return max_width, target_height
+    canvas_width = min(max(calculated_width, min_width), max_canvas_width)
+
+    if canvas_width % 2:
+        canvas_width += 1
+    return canvas_width, target_height
 
 
 @lru_cache(maxsize=8)
