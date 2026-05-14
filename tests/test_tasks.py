@@ -1,11 +1,12 @@
 import unittest
 import wave
 import tempfile
+import shutil
 from pathlib import Path
 
 from PIL import Image
 
-from tasks import apply_post_effects, bitrate_plan, collection_background_theme, collection_canvas_size, copy_tree_contents, estimate_bpm_from_wav, fps_from_bpm, normalize_post_settings, normalize_source_url, invert_logo, sample_images, shuffled_images
+from tasks import apply_post_effects, bitrate_plan, collection_background_theme, collection_canvas_size, copy_tree_contents, ensure_thumbnail, estimate_bpm_from_wav, find_images, fps_from_bpm, normalize_post_settings, normalize_source_url, invert_logo, sample_images, shuffled_images
 
 
 class TaskHelperTests(unittest.TestCase):
@@ -100,6 +101,31 @@ class TaskHelperTests(unittest.TestCase):
 
             self.assertTrue((target / "pinterest" / "board_a" / "a.jpg").exists())
             self.assertTrue((target / "pinterest" / "board_b" / "b.jpg").exists())
+
+    def test_find_images_includes_webp_files(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            webp = root / "source.webp"
+            Image.new("RGB", (4, 4), "red").save(webp, format="WEBP")
+            (root / "ignored.txt").write_text("not an image")
+
+            self.assertEqual(find_images(root), [webp])
+
+    def test_ensure_thumbnail_accepts_webp_files(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            image_path = root / "source.webp"
+            Image.new("RGB", (12, 8), "red").save(image_path, format="WEBP")
+            job_id = f"webp-test-{root.name}"
+
+            thumbnail = ensure_thumbnail(job_id, image_path, "webp-checksum")
+
+            try:
+                self.assertTrue(thumbnail.exists())
+                with Image.open(thumbnail) as image:
+                    self.assertEqual(image.format, "JPEG")
+            finally:
+                shutil.rmtree(thumbnail.parent.parent, ignore_errors=True)
 
     def test_collection_canvas_size_keeps_height_and_scales_width(self):
         with tempfile.TemporaryDirectory() as tmp:

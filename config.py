@@ -16,7 +16,7 @@ class AppConfig:
     output_dir: Path = Path(os.getenv("OUTPUT_DIRECTORY", Path(__file__).resolve().parent / "downloaded_images"))
     cache_dir: Path = Path(os.getenv("CACHE_DIRECTORY", Path(__file__).resolve().parent / ".cache" / "media"))
     database_path: Path = Path(os.getenv("DATABASE_PATH", Path(__file__).resolve().parent / "instance" / "jobs.sqlite3"))
-    max_images: int = int(os.getenv("MAX_IMAGES", "80"))
+    max_images: int = int(os.getenv("MAX_IMAGES", "160"))
     min_images: int = int(os.getenv("MIN_IMAGES", "8"))
     max_duration_seconds: int = int(os.getenv("MAX_DURATION_SECONDS", "3600"))
     default_frame_rate: int = int(os.getenv("DEFAULT_FRAME_RATE", "10"))
