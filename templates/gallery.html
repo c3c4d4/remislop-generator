@@ -73,7 +73,7 @@
             justify-content: center;
             min-height: var(--control-height);
             padding: var(--space-2) var(--space-5);
-            border: 1px solid rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.06);
             border-radius: var(--radius-control);
             background-color: rgba(0, 0, 0, 0.08);
             color: var(--window-fg-color);
@@ -114,11 +114,14 @@
             outline-offset: 1px;
             border-color: transparent;
         }
-        input[type="file"] { padding: var(--space-1) var(--space-2); }
+        input[type="file"] {
+            padding: var(--space-1) var(--space-2);
+            color: var(--dim-color);
+        }
         input[type="file"]::file-selector-button {
             margin: 0 var(--space-3) 0 0;
             padding: var(--space-2) var(--space-4);
-            border: 1px solid rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.06);
             border-radius: var(--radius-control);
             background-color: var(--shade-color);
             color: var(--window-fg-color);
@@ -134,6 +137,24 @@
             background-color: transparent;
             accent-color: var(--accent-bg-color);
         }
+        ::selection {
+            background-color: rgba(53, 132, 228, 0.3);
+            color: var(--window-fg-color);
+        }
+        ::-webkit-scrollbar { width: 12px; height: 12px; }
+        ::-webkit-scrollbar-track { background-color: transparent; }
+        ::-webkit-scrollbar-thumb {
+            border: 3px solid transparent;
+            border-radius: 999px;
+            background-color: rgba(0, 0, 0, 0.25);
+            background-clip: content-box;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background-color: rgba(0, 0, 0, 0.38);
+        }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::after, *::before { transition-duration: 0s; animation-duration: 0s; }
+        }
         main { width: min(1120px, calc(100vw - 32px)); margin: var(--space-8) auto; }
         .actions {
             position: sticky;
@@ -145,6 +166,7 @@
             flex-wrap: wrap;
             margin: var(--space-5) 0;
             padding: var(--space-3) 0;
+            border-bottom: 1px solid var(--card-shade-color);
             background-color: var(--window-bg-color);
         }
         .post {
@@ -211,7 +233,12 @@
             background-repeat: no-repeat;
             background-size: 14px 14px;
         }
-        .tile:has(input:checked) { border-color: var(--accent-bg-color); }
+        .tile:not(:has(input:checked)) img { opacity: 0.45; }
+        .tile:hover input { border-color: rgba(0, 0, 0, 0.25); }
+        .tile input:focus-visible {
+            outline: 2px solid var(--accent-bg-color);
+            outline-offset: 2px;
+        }
         .tile::after {
             content: "";
             position: absolute;

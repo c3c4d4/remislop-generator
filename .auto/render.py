@@ -169,6 +169,7 @@ document.getElementById('trim').hidden = false;
 document.getElementById('youtube-title').textContent = 'Aphex Twin — Windowlicker';
 document.getElementById('youtube-duration').textContent = '6:07';
 const rs = document.getElementById('range-start'), re = document.getElementById('range-end');
+videoDuration = 367;
 rs.max = 367; re.max = 367; rs.value = 30; re.value = 180;
 updateRangeFromInputs('end');
 """
