@@ -89,6 +89,28 @@ Diagnostics: the `DETAIL` JSON line lists per page the failing sub-scores,
   keep the existing two-thumb trick working (pointer-events on thumb only).
 
 ## What's Been Tried
-- baseline (HEAD): `adwaita=60.96`. Neutral grey-on-white minimal look: `#111`
-  fills, `system-ui` stack, ΔE≈15 colours (`#111111`), radius ok, spacing off-grid
-  (`14px` gaps), zero accent, `sync=80` (index lacks `--bad`).
+
+| run | adwaita | what changed |
+|---|---|---|
+| 0 | 60.96 | baseline: grey-on-white minimal look, `#111` fills, `system-ui`, ΔE≈15, off-grid gaps, no accent, `sync=80` |
+| 1 | 96.26 | full restyle: one shared `:root` token block in all three templates, `#fafafa` window + white cards (`12px` radius, 1px `rgba(0,0,0,.15)` hairline), Adwaita Sans + 20/15/13/11 scale, 3px rhythm, `#3584e4` submit button, boxed-list job history |
+| 2 | 96.31 | button hairline `rgba(0,0,0,.06)` (was `.1`, composited to `#cfcfcf`, ΔE 3.6) → `palette=100`, ΔE 0.2; optional overlay scrollbar + selection; tiles dim when unchecked |
+| 3 | 96.31 | inset trim panel on `#fafafa`, dim file-entry text, reduced-motion, tile hover/focus (metric-neutral) |
+| 4 | 96.31 | tabular numerals on `.meta`, row hover shade, inset progress trough (metric-neutral) |
+
+### Why 96.31 is the practical ceiling of this metric
+- `accent=80.7`: the residual is `accent_text` (0.15) + `destructive` (0.15) on
+  `index`/`gallery`. Those pages have **no link and no error state**, and the
+  markup is frozen, so there is nowhere to put accent-coloured text without
+  faking it. `index_errors`/`status_failed` do score the destructive role.
+- `contrast=97.6`: white `#ffffff` on `#3584e4` is **3.77:1** — that is exactly
+  what Adwaita ships for `.suggested-action`. Darkening the fill to blue-4
+  (`#1c71d8`, 4.78:1) makes it AA, but `#1c71d8` resolves to the
+  `accent_color` token, which is *not* in the accent-surface set, so the page
+  would lose `accent_surface` (0.55 × 18 pts) and score ~2.5 points worse.
+  Decision: keep the HIG colour, accept 3.77:1.
+- `palette/type/geometry/surfaces/pixels/sync` are all at 100.
+
+Further iterations should therefore be judged **by eye**, using the score only
+as a regression guard: hover/active states, 390px layout, long-content
+behaviour. `--shots DIR` keeps the seven fixture PNGs for comparison.
