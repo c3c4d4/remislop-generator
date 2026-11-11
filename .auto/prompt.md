@@ -1,11 +1,14 @@
-# Autoresearch: Adwaita light restyle of edit.lvh.me (remislop-generator)
+# Autoresearch: Adwaita **dark** restyle of edit.lvh.me (remislop-generator)
 
 ## Objective
 Redo the entire look of the `remislop-generator` Flask UI (served at
-https://edit.lvh.me) so it reads as a native **Adwaita light** GNOME app:
-`#fafafa` window, white view/card surfaces, 1px `#d9d9d9` hairlines, Adwaita Sans
-on the GNOME type scale, Adwaita Sans 3px rhythm, `#3584e4` accent for the
-primary action, dim/label greys, and Adwaita destructive red for errors.
+https://edit.lvh.me) so it reads as a native **Adwaita dark** GNOME app
+(libadwaita 1.10 `prefers-color-scheme: dark` tokens): `#222226` window,
+`#1d1d20` view/entry base, cards as `rgb(255 255 255 / 8%)` over the window,
+flat control fills with no outlines, Adwaita Sans on the GNOME type scale, 3px
+rhythm, `#3584e4` accent fill with white label, `#81d0ff` for accent *text*
+(oklab standalone), `#ff938c` destructive text on `#c01c28`.
+(The previous light theme lives in commit 87440a4 if it is ever wanted back.)
 
 **CSS only.** The three templates (`index.html`, `gallery.html`, `status.html`)
 may change *inside their `<style>` blocks and nothing else*. Markup, copy,
@@ -34,7 +37,8 @@ classes, attributes and JavaScript must stay byte-identical.
 ./.auto/measure.sh --shots out/dir  # also keep PNGs of every fixture page
 ./.auto/checks.sh                   # CSS-only guard + CSS sanity (run before keep)
 ```
-`measure.sh` takes ~6s. It renders the templates with realistic fixture data into
+`measure.sh --scheme dark|light` selects which palette model scores the render
+(default `dark`). `measure.sh` takes ~6s. It renders the templates with realistic fixture data into
 `/tmp/remislop-adw/`, screenshots them with headless Chromium at 1280×900, reads
 the computed styles of every visible element and scores them.
 
@@ -97,6 +101,15 @@ Diagnostics: the `DETAIL` JSON line lists per page the failing sub-scores,
 | 2 | 96.31 | button hairline `rgba(0,0,0,.06)` (was `.1`, composited to `#cfcfcf`, ΔE 3.6) → `palette=100`, ΔE 0.2; optional overlay scrollbar + selection; tiles dim when unchecked |
 | 3 | 96.31 | inset trim panel on `#fafafa`, dim file-entry text, reduced-motion, tile hover/focus (metric-neutral) |
 | 4 | 96.31 | tabular numerals on `.meta`, row hover shade, inset progress trough (metric-neutral) |
+| 5 | 96.31 | **dark segment** (new metric model): every token swapped to libadwaita 1.10 dark, flat buttons/entries without outlines, GNOME sliders (explicit track+thumb), fixed tile checkbox painted under the thumbnail (`filter` on `img` paints above an earlier absolute sibling → `z-index: 1`) |
+
+### Dark vs light
+`--scheme` selects the palette model, so the same 96.31 in both means the same
+things are still wrong, not that nothing changed: `palette` is 100 in both
+(ΔE 0.2). Dark's own dark-composite tokens (`card_bg_color` 8% white over the
+window, borders 10% white, `dim` 55% white, `track` 15% white, the tile checkbox
+at 45% black) are pre-composited into `DARK["tokens"]` — recompute them in the
+comment of `adwspec.DARK` if a backdrop changes.
 
 ### Why 96.31 is the practical ceiling of this metric
 - `accent=80.7`: the residual is `accent_text` (0.15) + `destructive` (0.15) on
