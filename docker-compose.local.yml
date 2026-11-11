@@ -1,0 +1,32 @@
+# Single-container local run behind the infra Caddy (https://edit.lvh.me).
+# Jobs run in-process (LOCAL_BACKGROUND_JOBS + eager Celery), so no RabbitMQ
+# and no worker; nothing is published on the host, Caddy reaches it over the
+# shared "edge" network as remislop:5000.
+services:
+  web:
+    build: .
+    container_name: remislop
+    restart: unless-stopped
+    environment:
+      - CELERY_TASK_ALWAYS_EAGER=true
+      - LOCAL_BACKGROUND_JOBS=true
+      - OUTPUT_DIRECTORY=/app/downloaded_images
+      - CACHE_DIRECTORY=/app/.cache/media
+      - DATABASE_PATH=/app/instance/jobs.sqlite3
+    volumes:
+      # templates stay on the host so the CSS loop can iterate without a rebuild
+      - ./templates:/app/templates:ro
+      - shared_data:/app/downloaded_images
+      - cache_data:/app/.cache
+      - app_data:/app/instance
+    networks: [edge]
+
+volumes:
+  shared_data:
+  cache_data:
+  app_data:
+
+networks:
+  edge:
+    external: true
+    name: edge
