@@ -1,4 +1,9 @@
-# Autoresearch: Adwaita **dark** restyle of edit.lvh.me (remislop-generator)
+# Autoresearch: Adwaita light+dark restyle of edit.lvh.me (remislop-generator)
+
+> The UI now ships **both** schemes: Adwaita dark is the `:root` default and
+> `@media (prefers-color-scheme: light)` overrides every token (light block at the
+> end of the base rules, identical in all three templates). Score both with
+> `measure.sh --scheme dark` and `--scheme light` — currently 96.31 each.
 
 ## Objective
 Redo the entire look of the `remislop-generator` Flask UI (served at
@@ -101,6 +106,7 @@ Diagnostics: the `DETAIL` JSON line lists per page the failing sub-scores,
 | 2 | 96.31 | button hairline `rgba(0,0,0,.06)` (was `.1`, composited to `#cfcfcf`, ΔE 3.6) → `palette=100`, ΔE 0.2; optional overlay scrollbar + selection; tiles dim when unchecked |
 | 3 | 96.31 | inset trim panel on `#fafafa`, dim file-entry text, reduced-motion, tile hover/focus (metric-neutral) |
 | 4 | 96.31 | tabular numerals on `.meta`, row hover shade, inset progress trough (metric-neutral) |
+| 6 | 96.31 (dark **and** light) | both schemes in one stylesheet: dark tokens default, light override under `prefers-color-scheme`; every hardcoded rgba/hex promoted to a token (`--button-border-color`, `--check-*`, `--knob-color`, `--thumb-shadow`, `--trough-shadow`, `--scrollbar-thumb-*`, `--selection-bg-color`, `--row-hover-color`, `--video-bg-color`); `measure.py` emulates the preference with `--blink-settings=preferredColorScheme=0|1` |
 | 5 | 96.31 | **dark segment** (new metric model): every token swapped to libadwaita 1.10 dark, flat buttons/entries without outlines, GNOME sliders (explicit track+thumb), fixed tile checkbox painted under the thumbnail (`filter` on `img` paints above an earlier absolute sibling → `z-index: 1`) |
 
 ### Dark vs light

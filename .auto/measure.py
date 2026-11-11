@@ -30,6 +30,12 @@ import render as render_mod  # noqa: E402
 CHROME = shutil.which("chromium") or shutil.which("chromium-browser") or "chromium"
 VIEWPORT = (1280, 900)
 
+# prefers-color-scheme emulation: 0 = dark, 1 = light
+SCHEME_FLAGS = {
+    "dark": ["--blink-settings=preferredColorScheme=0"],
+    "light": ["--blink-settings=preferredColorScheme=1"],
+}
+
 CHROME_FLAGS = [
     "--headless", "--no-sandbox", "--disable-gpu", "--hide-scrollbars",
     "--force-device-scale-factor=1", "--no-first-run", "--no-default-browser-check",
@@ -47,16 +53,16 @@ def run(cmd):
     return proc.stdout
 
 
-def dump_page(path):
-    out = run([CHROME, *CHROME_FLAGS, "--dump-dom", path.as_uri()])
+def dump_page(path, scheme="dark"):
+    out = run([CHROME, *CHROME_FLAGS, *SCHEME_FLAGS[scheme], "--dump-dom", path.as_uri()])
     m = re.search(r'data-adw="(.*?)"><head', out, re.S)
     if not m:
         raise RuntimeError(f"no metrics collected from {path.name}")
     return json.loads(htmlmod.unescape(m.group(1)))
 
 
-def screenshot(path, png):
-    run([CHROME, *CHROME_FLAGS, f"--screenshot={png}", path.as_uri()])
+def screenshot(path, png, scheme="dark"):
+    run([CHROME, *CHROME_FLAGS, *SCHEME_FLAGS[scheme], f"--screenshot={png}", path.as_uri()])
 
 
 def pixel_stats(png):
@@ -124,8 +130,8 @@ def measure(shots_dir=None, scheme="dark"):
         name = spec["name"]
         path = BUILD / f"{name}.html"
         png = SHOTS / f"{name}.png"
-        data = dump_page(path)
-        screenshot(path, png)
+        data = dump_page(path, scheme)
+        screenshot(path, png, scheme)
         pixel = pixel_stats(png)
         metrics, notes = adwspec.score_page(data, pixel)
         pages.append(metrics)

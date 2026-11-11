@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Review Images</title>
     <style>
+        /* Adwaita dark is the default; light overrides at the bottom. */
         :root {
             color-scheme: dark;
             /* Adwaita dark colour tokens (libadwaita 1.10) */
@@ -26,7 +27,21 @@
             --button-bg-color: rgba(255, 255, 255, 0.1);
             --button-hover-bg-color: rgba(255, 255, 255, 0.16);
             --button-active-bg-color: rgba(255, 255, 255, 0.22);
+            --button-border-color: transparent;
+            --control-border-color: transparent;
+            --control-hover-border-color: rgba(255, 255, 255, 0.1);
+            --row-hover-color: rgba(255, 255, 255, 0.04);
             --dim-color: rgba(255, 255, 255, 0.55);
+            --scrollbar-thumb-color: rgba(255, 255, 255, 0.25);
+            --scrollbar-thumb-hover-color: rgba(255, 255, 255, 0.4);
+            --selection-bg-color: rgba(53, 132, 228, 0.45);
+            --check-bg-color: rgba(0, 0, 6, 0.45);
+            --check-border-color: rgba(255, 255, 255, 0.2);
+            --check-hover-border-color: rgba(255, 255, 255, 0.35);
+            --check-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+            --thumb-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+            --trough-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
+            --knob-color: #ffffff;
             --accent-bg-color: #3584e4;
             --accent-fg-color: #ffffff;
             --accent-color: #81d0ff;
@@ -56,6 +71,57 @@
             --space-7: 36px;
             --space-8: 48px;
             --control-height: 34px;
+        }
+
+        @media (prefers-color-scheme: light) {
+            /* Adwaita light colour tokens */
+            :root {
+                color-scheme: light;
+                --window-bg-color: #fafafa;
+                --window-fg-color: rgba(0, 0, 0, 0.8);
+                --view-bg-color: #ffffff;
+                --view-fg-color: #333333;
+                --headerbar-bg-color: #ffffff;
+                --card-bg-color: #ffffff;
+                --card-shade-color: rgba(0, 0, 0, 0.07);
+                --dialog-bg-color: #fafafa;
+                --popover-bg-color: #ffffff;
+                --sidebar-bg-color: #ebebed;
+                --thumb-bg-color: #ffffff;
+                --video-bg-color: #241f31;
+                --border-color: rgba(0, 0, 0, 0.15);
+                --shade-color: #e6e6e6;
+                --track-color: #deddda;
+                --button-bg-color: rgba(0, 0, 0, 0.08);
+                --button-hover-bg-color: rgba(0, 0, 0, 0.13);
+                --button-active-bg-color: rgba(0, 0, 0, 0.18);
+                --button-border-color: rgba(0, 0, 0, 0.06);
+                --control-border-color: rgba(0, 0, 0, 0.15);
+                --control-hover-border-color: rgba(0, 0, 0, 0.25);
+                --row-hover-color: rgba(0, 0, 0, 0.04);
+                --dim-color: #5e5c64;
+                --scrollbar-thumb-color: rgba(0, 0, 0, 0.25);
+                --scrollbar-thumb-hover-color: rgba(0, 0, 0, 0.38);
+                --selection-bg-color: rgba(53, 132, 228, 0.3);
+                --check-bg-color: #ffffff;
+                --check-border-color: rgba(0, 0, 0, 0.15);
+                --check-hover-border-color: rgba(0, 0, 0, 0.25);
+                --check-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+                --thumb-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+                --trough-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.06);
+                --knob-color: #ffffff;
+                --accent-bg-color: #3584e4;
+                --accent-fg-color: #ffffff;
+                --accent-color: #1c71d8;
+                --accent-hover: #62a0ea;
+                --accent-active: #1c71d8;
+                --destructive-bg-color: #e01b24;
+                --destructive-color: #c01c28;
+                --error-bg-color: #e01b24;
+                --error-color: #c01c28;
+                --success-color: #26a269;
+                --warning-color: #cd9309;
+            }
         }
         * { box-sizing: border-box; }
         body {
@@ -91,7 +157,7 @@
             justify-content: center;
             min-height: var(--control-height);
             padding: var(--space-2) var(--space-5);
-            border: 1px solid transparent;
+            border: 1px solid var(--button-border-color);
             border-radius: var(--radius-control);
             background-color: var(--button-bg-color);
             color: var(--window-fg-color);
@@ -118,7 +184,7 @@
             width: 100%;
             min-height: var(--control-height);
             padding: var(--space-2) var(--space-4);
-            border: 1px solid transparent;
+            border: 1px solid var(--control-border-color);
             border-radius: var(--radius-control);
             background-color: var(--view-bg-color);
             color: var(--window-fg-color);
@@ -126,7 +192,7 @@
         }
         textarea { min-height: 96px; resize: vertical; line-height: 1.45; }
         input::placeholder, textarea::placeholder { color: var(--dim-color); }
-        input:hover, textarea:hover { border-color: var(--border-color); }
+        input:hover, textarea:hover { border-color: var(--control-hover-border-color); }
         input:focus, textarea:focus {
             outline: 2px solid var(--accent-bg-color);
             outline-offset: 1px;
@@ -139,7 +205,7 @@
         input[type="file"]::file-selector-button {
             margin: 0 var(--space-3) 0 0;
             padding: var(--space-2) var(--space-4);
-            border: 1px solid transparent;
+            border: 1px solid var(--button-border-color);
             border-radius: var(--radius-control);
             background-color: var(--shade-color);
             color: var(--window-fg-color);
@@ -156,7 +222,7 @@
             accent-color: var(--accent-bg-color);
         }
         ::selection {
-            background-color: rgba(53, 132, 228, 0.45);
+            background-color: var(--selection-bg-color);
             color: var(--window-fg-color);
         }
         ::-webkit-scrollbar { width: 12px; height: 12px; }
@@ -164,11 +230,11 @@
         ::-webkit-scrollbar-thumb {
             border: 3px solid transparent;
             border-radius: 999px;
-            background-color: rgba(255, 255, 255, 0.25);
+            background-color: var(--scrollbar-thumb-color);
             background-clip: content-box;
         }
         ::-webkit-scrollbar-thumb:hover {
-            background-color: rgba(255, 255, 255, 0.4);
+            background-color: var(--scrollbar-thumb-hover-color);
         }
         @media (prefers-reduced-motion: reduce) {
             *, *::after, *::before { transition-duration: 0s; animation-duration: 0s; }
@@ -220,8 +286,8 @@
             margin-top: -6px;
             border: 0;
             border-radius: 999px;
-            background-color: #ffffff;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+            background-color: var(--knob-color);
+            box-shadow: var(--thumb-shadow);
         }
         .control input::-moz-range-track {
             height: 4px;
@@ -271,10 +337,10 @@
             height: 18px;
             margin: 0;
             appearance: none;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid var(--check-border-color);
             border-radius: var(--space-1);
-            background-color: rgba(0, 0, 6, 0.45);
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+            background-color: var(--check-bg-color);
+            box-shadow: var(--check-shadow);
             cursor: pointer;
         }
         .tile input:checked {
@@ -286,7 +352,7 @@
             background-size: 14px 14px;
         }
         .tile:not(:has(input:checked)) img { opacity: 0.45; }
-        .tile:hover input { border-color: rgba(255, 255, 255, 0.35); }
+        .tile:hover input { border-color: var(--check-hover-border-color); }
         .tile input:focus-visible {
             outline: 2px solid var(--accent-bg-color);
             outline-offset: 2px;
