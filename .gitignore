@@ -6,3 +6,5 @@ downloaded_images/
 .cache/
 instance/
 previews/
+.auto/shots/
+.auto/baseline-dirty.txt

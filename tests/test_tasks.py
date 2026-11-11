@@ -6,7 +6,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from tasks import apply_post_effects, bitrate_plan, collection_background_theme, collection_canvas_size, copy_tree_contents, ensure_thumbnail, estimate_bpm_from_wav, find_images, fps_from_bpm, normalize_post_settings, normalize_source_url, invert_logo, sample_images, shuffled_images
+from tasks import apply_post_effects, bitrate_plan, collection_background_theme, collection_canvas_size, copy_tree_contents, ensure_thumbnail, estimate_bpm_from_wav, find_images, fps_from_bpm, normalize_post_settings, normalize_source_url, sample_images, shuffled_images
 
 
 class TaskHelperTests(unittest.TestCase):
@@ -58,14 +58,6 @@ class TaskHelperTests(unittest.TestCase):
         self.assertGreater(short["video_kbps"], long["video_kbps"])
         self.assertGreaterEqual(long["audio_kbps"], 16)
         self.assertGreaterEqual(long["video_kbps"], 12)
-
-    def test_invert_logo_preserves_alpha(self):
-        logo = Image.new("RGBA", (2, 2), (0, 0, 0, 0))
-        logo.putpixel((0, 0), (255, 0, 0, 128))
-        inverted = invert_logo(logo)
-
-        self.assertEqual(inverted.getpixel((0, 0)), (0, 255, 255, 128))
-        self.assertEqual(inverted.getpixel((1, 1))[3], 0)
 
     def test_estimate_bpm_from_empty_wav_falls_back(self):
         path = Path("empty_bpm_test.wav")

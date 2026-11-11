@@ -7,12 +7,11 @@ import subprocess
 import sys
 import wave
 from concurrent.futures import ThreadPoolExecutor
-from functools import lru_cache
 from pathlib import Path
 from time import sleep
 from urllib.parse import urlparse, urlunparse
 
-from PIL import Image, ImageEnhance, ImageOps
+from PIL import Image, ImageEnhance
 
 from celery_config import celery_app, logger
 from config import config
@@ -576,29 +575,6 @@ def collection_canvas_size(image_paths, target_height=1080, min_width=1080, max_
     return canvas_width, target_height
 
 
-@lru_cache(maxsize=8)
-def load_watermark_mask(path, logo_size):
-    if not Path(path).exists():
-        return None
-    with Image.open(path) as image:
-        logo = image.convert("RGBA")
-        
-    bbox = logo.getbbox()
-    if bbox:
-        logo = logo.crop(bbox)
-        
-    logo.thumbnail((logo_size, logo_size), Image.Resampling.LANCZOS)
-    return logo
-
-
-def invert_logo(logo):
-    alpha = logo.getchannel("A")
-    rgb = logo.convert("RGB")
-    inverted = ImageOps.invert(rgb).convert("RGBA")
-    inverted.putalpha(alpha)
-    return inverted
-
-
 def collection_background_theme(image_paths, sample_size=(96, 96), max_samples=48):
     sampled = sample_images(list(image_paths), max_samples)
     dark_pixels = 0
@@ -614,35 +590,6 @@ def collection_background_theme(image_paths, sample_size=(96, 96), max_samples=4
         except Exception:
             continue
     return "dark" if dark_pixels >= light_pixels else "light"
-
-
-def apply_watermark(frame, frame_number, background_theme, frame_rate, bpm):
-    logo_size = config.watermark_size
-    margin = config.watermark_margin
-    mask = load_watermark_mask(str(config.watermark_source_path), logo_size)
-    if mask is None:
-        return frame
-
-    if background_theme == "dark":
-        logo = invert_logo(mask)
-    else:
-        logo = mask.copy()
-
-    degrees_per_frame = 360 * (max(1, bpm) / 60) / max(1, frame_rate)
-    angle = -(frame_number * degrees_per_frame)
-    
-    original_w, original_h = logo.size
-    rotated_logo = logo.rotate(angle, expand=True, resample=Image.Resampling.BICUBIC)
-    
-    width, height = frame.size
-    center_x = width - margin - (original_w / 2)
-    center_y = height - margin - (original_h / 2)
-    
-    left = int(round(center_x - (rotated_logo.width / 2)))
-    top = int(round(center_y - (rotated_logo.height / 2)))
-    
-    frame.alpha_composite(rotated_logo, (max(0, left), max(0, top)))
-    return frame
 
 
 def decode_audio_to_wav(job_id, audio_path, wav_path):
@@ -793,7 +740,6 @@ def render_frames(job_id, images, frames_dir, duration, frame_rate, audio_path, 
         with Image.open(layer_path) as layer:
             base.alpha_composite(layer)
         frame = apply_post_effects(base.copy(), post_settings)
-        frame = apply_watermark(frame, frame_number, background_theme, frame_rate, bpm)
         destination = sequence_dir / f"{frame_number:05d}.jpg"
         frame.convert("RGB").save(destination, format="JPEG", quality=88, optimize=True)
         if frame_number and frame_number % progress_interval == 0:
