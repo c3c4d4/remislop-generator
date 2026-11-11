@@ -6,25 +6,38 @@
     <title>Job {{ job.id }}</title>
     <style>
         :root {
-            color-scheme: light;
-            /* Adwaita light colour tokens */
-            --window-bg-color: #fafafa;
-            --window-fg-color: rgba(0, 0, 0, 0.8);
-            --view-bg-color: #ffffff;
-            --card-bg-color: #ffffff;
-            --card-shade-color: rgba(0, 0, 0, 0.07);
-            --headerbar-bg-color: #ffffff;
-            --border-color: rgba(0, 0, 0, 0.15);
-            --shade-color: #e6e6e6;
-            --track-color: #deddda;
-            --dim-color: #5e5c64;
+            color-scheme: dark;
+            /* Adwaita dark colour tokens (libadwaita 1.10) */
+            --window-bg-color: #222226;
+            --window-fg-color: #ffffff;
+            --view-bg-color: #1d1d20;
+            --view-fg-color: #ffffff;
+            --headerbar-bg-color: #2e2e32;
+            --card-bg-color: rgba(255, 255, 255, 0.08);
+            --card-shade-color: rgba(0, 0, 6, 0.25);
+            --dialog-bg-color: #36363a;
+            --popover-bg-color: #36363a;
+            --sidebar-bg-color: #2e2e32;
+            --thumb-bg-color: #39393d;
+            --video-bg-color: #16161a;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --shade-color: rgba(255, 255, 255, 0.12);
+            --track-color: rgba(255, 255, 255, 0.15);
+            --button-bg-color: rgba(255, 255, 255, 0.1);
+            --button-hover-bg-color: rgba(255, 255, 255, 0.16);
+            --button-active-bg-color: rgba(255, 255, 255, 0.22);
+            --dim-color: rgba(255, 255, 255, 0.55);
             --accent-bg-color: #3584e4;
             --accent-fg-color: #ffffff;
-            --accent-color: #1c71d8;
-            --destructive-bg-color: #e01b24;
-            --destructive-color: #c01c28;
-            --success-color: #26a269;
-            --warning-color: #cd9309;
+            --accent-color: #81d0ff;
+            --accent-hover: #62a0ea;
+            --accent-active: #1c71d8;
+            --destructive-bg-color: #c01c28;
+            --destructive-color: #ff938c;
+            --error-bg-color: #c01c28;
+            --error-color: #ff938c;
+            --success-color: #78e9ab;
+            --warning-color: #ffc252;
             /* Adwaita type scale */
             --font-family: "Adwaita Sans", Cantarell, system-ui, -apple-system, sans-serif;
             --font-title: 20px;
@@ -78,9 +91,9 @@
             justify-content: center;
             min-height: var(--control-height);
             padding: var(--space-2) var(--space-5);
-            border: 1px solid rgba(0, 0, 0, 0.06);
+            border: 1px solid transparent;
             border-radius: var(--radius-control);
-            background-color: rgba(0, 0, 0, 0.08);
+            background-color: var(--button-bg-color);
             color: var(--window-fg-color);
             font: inherit;
             font-weight: 700;
@@ -88,15 +101,15 @@
             text-decoration: none;
             cursor: pointer;
         }
-        button:hover, .button:hover { background-color: rgba(0, 0, 0, 0.13); }
-        button:active, .button:active { background-color: rgba(0, 0, 0, 0.18); }
+        button:hover, .button:hover { background-color: var(--button-hover-bg-color); }
+        button:active, .button:active { background-color: var(--button-active-bg-color); }
         button[type="submit"] {
             border-color: transparent;
             background-color: var(--accent-bg-color);
             color: var(--accent-fg-color);
         }
-        button[type="submit"]:hover { background-color: #62a0ea; }
-        button[type="submit"]:active { background-color: var(--accent-color); }
+        button[type="submit"]:hover { background-color: var(--accent-hover); }
+        button[type="submit"]:active { background-color: var(--accent-active); }
         button:focus-visible, .button:focus-visible {
             outline: 2px solid var(--accent-bg-color);
             outline-offset: 2px;
@@ -105,7 +118,7 @@
             width: 100%;
             min-height: var(--control-height);
             padding: var(--space-2) var(--space-4);
-            border: 1px solid var(--border-color);
+            border: 1px solid transparent;
             border-radius: var(--radius-control);
             background-color: var(--view-bg-color);
             color: var(--window-fg-color);
@@ -113,7 +126,7 @@
         }
         textarea { min-height: 96px; resize: vertical; line-height: 1.45; }
         input::placeholder, textarea::placeholder { color: var(--dim-color); }
-        input:hover, textarea:hover { border-color: rgba(0, 0, 0, 0.25); }
+        input:hover, textarea:hover { border-color: var(--border-color); }
         input:focus, textarea:focus {
             outline: 2px solid var(--accent-bg-color);
             outline-offset: 1px;
@@ -126,7 +139,7 @@
         input[type="file"]::file-selector-button {
             margin: 0 var(--space-3) 0 0;
             padding: var(--space-2) var(--space-4);
-            border: 1px solid rgba(0, 0, 0, 0.06);
+            border: 1px solid transparent;
             border-radius: var(--radius-control);
             background-color: var(--shade-color);
             color: var(--window-fg-color);
@@ -143,7 +156,7 @@
             accent-color: var(--accent-bg-color);
         }
         ::selection {
-            background-color: rgba(53, 132, 228, 0.3);
+            background-color: rgba(53, 132, 228, 0.45);
             color: var(--window-fg-color);
         }
         ::-webkit-scrollbar { width: 12px; height: 12px; }
@@ -151,11 +164,11 @@
         ::-webkit-scrollbar-thumb {
             border: 3px solid transparent;
             border-radius: 999px;
-            background-color: rgba(0, 0, 0, 0.25);
+            background-color: rgba(255, 255, 255, 0.25);
             background-clip: content-box;
         }
         ::-webkit-scrollbar-thumb:hover {
-            background-color: rgba(0, 0, 0, 0.38);
+            background-color: rgba(255, 255, 255, 0.4);
         }
         @media (prefers-reduced-motion: reduce) {
             *, *::after, *::before { transition-duration: 0s; animation-duration: 0s; }
@@ -166,7 +179,7 @@
             margin: var(--space-5) 0;
             border-radius: 999px;
             background-color: var(--track-color);
-            box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.06);
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
             overflow: hidden;
         }
         .fill {
@@ -229,7 +242,7 @@
             width: 100%;
             max-height: 70vh;
             border-radius: var(--radius-control);
-            background-color: #241f31;
+            background-color: var(--video-bg-color);
         }
 
     </style>

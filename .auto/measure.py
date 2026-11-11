@@ -9,6 +9,7 @@ computed styles, scores them against the Adwaita (GNOME HIG) model and prints
 import argparse
 import html as htmlmod
 import json
+import os
 import re
 import shutil
 import statistics
@@ -109,8 +110,9 @@ def sync_score(tokens):
     return 0.5 + 0.5 * (identical / len(names) if names else 0.0)
 
 
-def measure(shots_dir=None):
+def measure(shots_dir=None, scheme="dark"):
     started = time.time()
+    adwspec.set_scheme(scheme)
     render_mod.render_all()
     SHOTS.mkdir(parents=True, exist_ok=True)
     if shots_dir:
@@ -157,6 +159,7 @@ def measure(shots_dir=None):
     sync = sync_score(tokens)
     total, avg = adwspec.combine(pages, sync)
 
+    print(f"SCHEME {adwspec.ACTIVE_SCHEME}")
     print(f"METRIC adwaita={total:.2f}")
     for key in ("accent", "palette", "type", "geometry", "surfaces", "contrast", "pixels"):
         print(f"METRIC {key}={avg[key] * 100:.1f}")
@@ -172,9 +175,11 @@ def measure(shots_dir=None):
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--shots")
+    ap.add_argument("--scheme", default=os.environ.get("ADW_SCHEME", "dark"),
+                    choices=["light", "dark"])
     args = ap.parse_args()
     try:
-        measure(args.shots)
+        measure(args.shots, args.scheme)
     except Exception as exc:  # noqa: BLE001
         print(f"MEASURE_FAILED {exc}")
         sys.exit(1)

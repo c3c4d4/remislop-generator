@@ -53,10 +53,8 @@ def main():
     primary, metrics = parse_metrics(args.measure)
     entries = [json.loads(line) for line in LOG.read_text().splitlines() if line.strip()] if LOG.exists() else []
     run = sum(1 for e in entries if "run" in e)
-    segment = 0
-    for entry in entries:
-        if "run" in entry:
-            segment = entry.get("segment", 0)
+    configs = sum(1 for e in entries if e.get("type") == "config")
+    segment = max(0, configs - 1)
 
     best = [e["metric"] for e in entries if e.get("status") == "keep" and "metric" in e]
     record = {

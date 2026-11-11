@@ -159,7 +159,101 @@ def rgb_to_lab(rgb):
     return (116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz))
 
 
-_PALETTE_LAB = {name: rgb_to_lab(parse_color(hexv)) for name, hexv in PALETTE.items()}
+LIGHT = {
+    "tokens": dict(PALETTE),
+    "window_bg": set(WINDOW_BG),
+    "surface": set(SURFACE_BG),
+    "text": set(TEXT_PRIMARY),
+    "dim": set(TEXT_DIM),
+    "border": set(BORDER),
+    "accent_bg": set(ACCENT_BG),
+    "accent_text": set(ACCENT_FG),
+    "destructive": set(DESTRUCTIVE),
+}
+
+# Adwaita dark, libadwaita 1.10 (src/stylesheet/_colors.scss, prefers-color-scheme: dark)
+# plus the composites those tokens produce on the backdrops this UI actually uses
+# (they are the same token seen through a different parent, like in LIGHT).
+DARK = {
+    "tokens": {
+        # windows / surfaces
+        "window_bg_color": "#222226",
+        "window_fg_color": "#ffffff",
+        "view_bg_color": "#1d1d20",
+        "view_fg_color": "#ffffff",
+        "headerbar_bg_color": "#2e2e32",
+        "dialog_bg_color": "#36363a",
+        "popover_bg_color": "#36363a",
+        "sidebar_bg_color": "#2e2e32",
+        "thumbnail_bg_color": "#39393d",
+        "video_bg_color": "#16161a",
+        "card_bg_color": "#343437",          # rgb(255 255 255 / 8%) over window
+        "card_shade_color": "#272729",       # rgb(0 0 6 / 25%) over card
+        "border_color": "#38383c",           # rgb(255 255 255 / 10%) over window
+        "border_on_card": "#48484b",
+        "border_on_view": "#343436",
+        "headerbar_border_color": "#434346",
+        "shade_color": "#38383b",            # rgb(255 255 255 / 12%) over view
+        "shade_on_card": "#4c4c4f",
+        "track_color": "#434347",            # rgb(255 255 255 / 15%) over window
+        "track_on_card": "#525255",
+        "check_bg": "#1e1e21",               # rgb(0 0 6 / 45%) over the tile
+        "check_border": "#4b4b4d",
+        # text
+        "dim_on_window": "#9c9c9d",          # rgb(255 255 255 / 55%)
+        "dim_on_card": "#a4a4a5",
+        "dim_on_view": "#99999b",
+        # semantic
+        "accent_bg_color": "#3584e4",
+        "accent_fg_color": "#ffffff",
+        "accent_color": "#81d0ff",           # oklab(from accent max(l,.85))
+        "accent_hover": "#62a0ea",
+        "accent_active": "#1c71d8",
+        "destructive_bg_color": "#c01c28",
+        "destructive_color": "#ff938c",      # oklab(from #c01c28 max(l,.85))
+        "error_bg_color": "#c01c28",
+        "error_color": "#ff938c",
+        "success_color": "#78e9ab",
+        "warning_color": "#ffc252",
+    },
+    "window_bg": {"window_bg_color"},
+    "surface": {"card_bg_color", "headerbar_bg_color", "popover_bg_color",
+                "dialog_bg_color", "thumbnail_bg_color"},
+    "text": {"window_fg_color", "view_fg_color"},
+    "dim": {"dim_on_window", "dim_on_card", "dim_on_view", "sidebar_bg_color"},
+    "border": {"border_color", "border_on_card", "border_on_view",
+               "headerbar_border_color", "shade_color", "shade_on_card",
+               "card_shade_color", "check_border"},
+    "accent_bg": {"accent_bg_color", "accent_hover", "accent_active"},
+    "accent_text": {"accent_color"},
+    "destructive": {"destructive_bg_color", "destructive_color",
+                    "error_bg_color", "error_color"},
+}
+
+SCHEMES = {"light": LIGHT, "dark": DARK}
+ACTIVE_SCHEME = "light"
+
+
+def set_scheme(name):
+    """Switch the palette model (light | dark)."""
+    global PALETTE, _PALETTE_LAB, ACTIVE_SCHEME
+    global WINDOW_BG, SURFACE_BG, TEXT_PRIMARY, TEXT_DIM, BORDER
+    global ACCENT_BG, ACCENT_FG, DESTRUCTIVE
+    scheme = SCHEMES[name]
+    PALETTE = scheme["tokens"]
+    WINDOW_BG = scheme["window_bg"]
+    SURFACE_BG = scheme["surface"]
+    TEXT_PRIMARY = scheme["text"]
+    TEXT_DIM = scheme["dim"]
+    BORDER = scheme["border"]
+    ACCENT_BG = scheme["accent_bg"]
+    ACCENT_FG = scheme["accent_text"]
+    DESTRUCTIVE = scheme["destructive"]
+    _PALETTE_LAB = {n: rgb_to_lab(parse_color(h)) for n, h in PALETTE.items()}
+    ACTIVE_SCHEME = name
+
+
+_PALETTE_LAB = {}
 
 
 def nearest_token(rgb):
@@ -427,3 +521,6 @@ def combine(pages, sync_score):
     avg["sync"] = sync_score
     total = sum(avg[k] * WEIGHTS[k] for k in WEIGHTS)
     return total, avg
+
+
+set_scheme("light")
